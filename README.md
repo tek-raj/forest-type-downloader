@@ -18,6 +18,22 @@ Runs in the browser — nothing to install. Use **Google Chrome** or **Microsoft
 If it stops (internet dropped, laptop closed, you pressed Stop), click download again and pick the
 same folder — tiles already saved are skipped.
 
+### One single .tif file
+
+The `.vrt` is a *virtual mosaic*: QGIS shows it as one stitched layer, but it only points at the
+tiles, so keep it in the same folder as them. To turn it into one real GeoTIFF (about 3 GB per year):
+
+1. In QGIS: **Raster › Conversion › Translate (Convert Format)…**
+2. **Input layer:** `Europe_ForestType_<year>.vrt`
+3. Open **Advanced Parameters** → **Additional creation options** → paste:
+   `COMPRESS=ZSTD|BIGTIFF=YES|TILED=YES|BLOCKXSIZE=512|BLOCKYSIZE=512|NUM_THREADS=ALL_CPUS`
+4. **Converted:** “…” › Save to File… › e.g. `Europe_ForestType_2024_10m.tif` → **Run**.
+   This takes a while (minutes to an hour, depending on the computer).
+5. So it displays quickly when zoomed out: **Raster › Miscellaneous › Build Overviews (Pyramids)…**,
+   input = the new `.tif`, **Resampling method: Nearest Neighbour** → Run.
+6. Copy `Europe_ForestType_<year>.qml` next to the new file and give it the same name
+   (e.g. `Europe_ForestType_2024_10m.qml`) so it opens coloured.
+
 Your password is sent only to Copernicus's own login server (`identity.dataspace.copernicus.eu`)
 and is never stored. The page is a single file, [`index.html`](index.html), if you want to check.
 
