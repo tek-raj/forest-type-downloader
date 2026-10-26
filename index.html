@@ -1,0 +1,354 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Forest Type Downloader</title>
+<meta name="description" content="Download the Copernicus Forest Type 10 m map of Europe (2018, 2021, 2024) straight into a folder, ready for QGIS.">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"
+        integrity="sha384-+mbV2IY1Zk/X1p/nWllGySJSUN8uMs+gUAN10Or95UBH0fpj6GfKgPmgC5EXieXG"
+        crossorigin="anonymous"></script>
+<style>
+  :root {
+    --bg: #f4f6f3; --card: #ffffff; --text: #1d2a1f; --muted: #5d6b60; --line: #d9e0da;
+    --accent: #2f6f3e; --accent-text: #ffffff; --warn-bg: #fff4dc; --warn: #7a5200;
+    --err-bg: #fde8e6; --err: #9b1c13; --ok: #2f6f3e; --track: #e6ebe6;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #121713; --card: #1b221c; --text: #e4ebe5; --muted: #9aa89d; --line: #2d382f;
+      --accent: #5fae70; --accent-text: #0d140e; --warn-bg: #3a2f14; --warn: #f0c56b;
+      --err-bg: #3d1c19; --err: #f3a49b; --ok: #7cc68b; --track: #273028;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #121713; --card: #1b221c; --text: #e4ebe5; --muted: #9aa89d; --line: #2d382f;
+    --accent: #5fae70; --accent-text: #0d140e; --warn-bg: #3a2f14; --warn: #f0c56b;
+    --err-bg: #3d1c19; --err: #f3a49b; --ok: #7cc68b; --track: #273028;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  main { max-width: 640px; margin: 0 auto; padding: 32px 16px 48px; }
+  h1 { font-size: 1.6rem; margin: 0 0 4px; }
+  .sub { color: var(--muted); margin: 0 0 24px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+          padding: 20px; margin-bottom: 16px; }
+  .card h2 { font-size: 1rem; margin: 0 0 12px; }
+  .step { display: inline-block; width: 1.6em; height: 1.6em; border-radius: 50%;
+          background: var(--accent); color: var(--accent-text); text-align: center;
+          font-size: .85rem; line-height: 1.6em; margin-right: 6px; }
+  label.field { display: block; font-size: .9rem; color: var(--muted); margin: 8px 0 4px; }
+  input[type=email], input[type=password], input[type=text] {
+    width: 100%; padding: 10px 12px; font: inherit; color: var(--text); background: var(--bg);
+    border: 1px solid var(--line); border-radius: 8px; }
+  input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .hint { font-size: .85rem; color: var(--muted); margin-top: 8px; }
+  .years { display: grid; gap: 8px; }
+  .year { display: flex; align-items: center; gap: 10px; padding: 10px 12px;
+          border: 1px solid var(--line); border-radius: 8px; cursor: pointer; }
+  .year input { width: 18px; height: 18px; accent-color: var(--accent); }
+  .year b { min-width: 3em; }
+  .year span { color: var(--muted); font-size: .9rem; }
+  .total { margin-top: 10px; font-size: .9rem; color: var(--muted); }
+  .buttons { display: flex; gap: 10px; flex-wrap: wrap; }
+  button { font: inherit; padding: 11px 18px; border-radius: 8px; cursor: pointer;
+           border: 1px solid var(--line); background: var(--card); color: var(--text); }
+  button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-text);
+                   font-weight: 600; }
+  button:disabled { opacity: .5; cursor: not-allowed; }
+  .bar { height: 10px; background: var(--track); border-radius: 5px; overflow: hidden; margin: 16px 0 8px; }
+  .bar div { height: 100%; width: 0; background: var(--accent); transition: width .3s; }
+  #status { font-size: .95rem; min-height: 1.5em; }
+  .note { padding: 12px 14px; border-radius: 8px; margin-bottom: 16px; font-size: .95rem; }
+  .note.warn { background: var(--warn-bg); color: var(--warn); }
+  .note.err { background: var(--err-bg); color: var(--err); }
+  .hidden { display: none; }
+  details { margin-top: 12px; font-size: .9rem; color: var(--muted); }
+  #log { max-height: 160px; overflow: auto; font: 12px/1.4 ui-monospace, Menlo, Consolas, monospace;
+         white-space: pre-wrap; margin: 8px 0 0; }
+  footer { font-size: .8rem; color: var(--muted); margin-top: 24px; }
+  footer a { color: inherit; }
+  ol.after { margin: 8px 0 0; padding-left: 20px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Forest Type Downloader</h1>
+  <p class="sub">Copernicus Forest Type map, 10 m, whole of Europe. Saved straight into a folder, ready for QGIS.</p>
+
+  <div id="browserWarn" class="note warn hidden">
+    This page needs <b>Google Chrome</b> or <b>Microsoft Edge</b> (on Mac or Windows) to save files into a folder.
+    Safari and Firefox can't do that. Please open this same link in Chrome.
+  </div>
+  <div id="error" class="note err hidden"></div>
+
+  <form class="card" onsubmit="return false">
+    <h2><span class="step">1</span>Copernicus Data Space login</h2>
+    <label class="field" for="user">Email</label>
+    <input id="user" type="email" autocomplete="username" placeholder="name@example.com">
+    <label class="field" for="pw">Password</label>
+    <input id="pw" type="password" autocomplete="current-password">
+    <p class="hint">No account? Create one free at
+      <a href="https://dataspace.copernicus.eu" target="_blank" rel="noopener">dataspace.copernicus.eu</a>.
+      The password goes only to Copernicus's own login server and is never stored.</p>
+  </form>
+
+  <section class="card">
+    <h2><span class="step">2</span>Year(s)</h2>
+    <div class="years" id="years"></div>
+    <div class="total" id="total">Loading tile list…</div>
+  </section>
+
+  <section class="card">
+    <h2><span class="step">3</span>Download</h2>
+    <div class="buttons">
+      <button id="go" class="primary" disabled>Choose folder &amp; download</button>
+      <button id="stop" disabled>Stop</button>
+    </div>
+    <p class="hint">You'll be asked to pick a folder (for example Downloads) and allow the page to save there.
+      A sub-folder per year is created. Keep this tab open until it finishes.</p>
+    <div class="bar"><div id="bar"></div></div>
+    <div id="status">Ready.</div>
+    <div id="after" class="hidden">
+      <ol class="after">
+        <li>Open QGIS and drag <b>Europe_ForestType_&lt;year&gt;.vrt</b> from the year folder onto the map:
+            all of Europe as one coloured layer.</li>
+        <li>Single tiles (<code>.tif</code>) also open on their own, already coloured.</li>
+      </ol>
+    </div>
+    <details><summary>Details</summary><div id="log"></div></details>
+  </section>
+
+  <footer>
+    Legend: 0 = non-forest, 1 = broadleaved forest, 2 = coniferous forest, 255 = outside area.
+    Projection ETRS89 / LAEA Europe (EPSG:3035); the overseas tiles GF, GP, MQ, RE, YT are in UTM and not part of the mosaic.<br>
+    Data: <a href="https://land.copernicus.eu/en/products/high-resolution-layer-forests-and-tree-cover/forest-type-2018-present-raster-10-m-europe-3-yearly" target="_blank" rel="noopener">CLMS High Resolution Layer Forest Type</a>,
+    served by the Copernicus Data Space Ecosystem. Unofficial helper tool, not affiliated with Copernicus.
+    Interrupted? Press download again with the same folder: tiles already saved are skipped.
+  </footer>
+</main>
+
+<script>
+const YEARS = ["2018", "2021", "2024"];
+const TOKEN_URL = "https://identity.dataspace.copernicus.eu/auth/realms/CDSE/protocol/openid-connect/token";
+const CATALOGUE = "https://catalogue.dataspace.copernicus.eu/odata/v1/Products";
+const DOWNLOAD = id => `https://download.dataspace.copernicus.eu/odata/v1/Products(${id})/$value`;
+const WORKERS = 4;              // CDSE allows a few parallel downloads per user
+const TILE_PX = 10000, TILE_M = 100000;
+
+const $ = id => document.getElementById(id);
+const tiles = {};               // year -> [{id, name, size}]
+let stopFlag = false, wakeLock = null;
+
+// ------------------------------------------------------------------ helpers
+const gb = b => (b / 1e9).toFixed(1) + " GB";
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+function log(msg) { const el = $("log"); el.textContent += msg + "\n"; el.scrollTop = el.scrollHeight; }
+function showError(msg) { $("error").textContent = msg; $("error").classList.toggle("hidden", !msg); }
+function setStatus(msg) { $("status").textContent = msg; }
+function selectedYears() { return YEARS.filter(y => $("y" + y).checked); }
+function store(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+function recall(k) { try { return localStorage.getItem(k) || ""; } catch (e) { return ""; } }
+
+// ---------------------------------------------------------------- catalogue
+async function loadCatalogue() {
+  for (const y of YEARS) {
+    const q = new URLSearchParams({
+      "$filter": `startswith(Name,'CLMS_HRLVLCC_FTY_S${y}_R10m')`,
+      "$select": "Id,Name,ContentLength", "$top": "1000" });
+    const r = await fetch(`${CATALOGUE}?${q}`);
+    if (!r.ok) throw new Error(`Tile list request failed (${r.status})`);
+    tiles[y] = (await r.json()).value.map(p => ({ id: p.Id, name: p.Name, size: p.ContentLength }));
+    $("info" + y).textContent = `${tiles[y].length} tiles, ${gb(tiles[y].reduce((s, t) => s + t.size, 0))}`;
+  }
+  updateTotal();
+}
+
+function updateTotal() {
+  const sel = selectedYears().flatMap(y => tiles[y] || []);
+  $("total").textContent = sel.length
+    ? `Selected: ${sel.length} tiles, about ${gb(sel.reduce((s, t) => s + t.size, 0))}`
+    : "Tick at least one year.";
+  $("go").disabled = !sel.length || !window.showDirectoryPicker;
+}
+
+// --------------------------------------------------------------------- auth
+const auth = {
+  async request(body) {
+    const r = await fetch(TOKEN_URL, { method: "POST", body: new URLSearchParams(body) });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) {
+      if (j.error === "invalid_grant" && body.grant_type === "password")
+        throw new Error("Login refused: please check the email and password of your Copernicus Data Space account.");
+      throw new Error(`Login failed (${r.status}): ${j.error_description || j.error || ""}`);
+    }
+    this.access = j.access_token;
+    this.refresh = j.refresh_token;
+    this.expires = Date.now() + ((j.expires_in || 600) - 60) * 1000;
+  },
+  login(user, pw) {
+    return this.request({ grant_type: "password", username: user, password: pw, client_id: "cdse-public" });
+  },
+  async token(force) {
+    if (force || Date.now() >= this.expires) {
+      if (!this.pending) this.pending = this.request({ grant_type: "refresh_token",
+          refresh_token: this.refresh, client_id: "cdse-public" }).finally(() => { this.pending = null; });
+      await this.pending;
+    }
+    return this.access;
+  },
+};
+
+// ----------------------------------------------------------------- files
+async function exists(dir, name) {
+  try {
+    const f = await (await dir.getFileHandle(name)).getFile();
+    if (!f.size) return false;
+    const h = new Uint8Array(await f.slice(0, 4).arrayBuffer());
+    return (h[0] === 0x49 && h[1] === 0x49) || (h[0] === 0x4d && h[1] === 0x4d);   // II / MM = TIFF
+  } catch (e) { return false; }
+}
+
+async function writeFile(dir, name, data) {
+  const w = await (await dir.getFileHandle(name, { create: true })).createWritable();
+  await w.write(data);
+  await w.close();              // file only appears complete once closed
+}
+
+async function downloadTile(t, dir) {
+  const tif = t.name + ".tif";
+  if (await exists(dir, tif)) return "skip";
+  for (let attempt = 1; ; attempt++) {
+    try {
+      let r = await fetch(DOWNLOAD(t.id), { headers: { Authorization: "Bearer " + await auth.token() } });
+      if (r.status === 401) r = await fetch(DOWNLOAD(t.id), { headers: { Authorization: "Bearer " + await auth.token(true) } });
+      if (r.status === 429) { await sleep(15000); throw new Error("busy (429)"); }
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      const buf = await r.arrayBuffer();
+      if (buf.byteLength !== t.size) throw new Error(`incomplete (${buf.byteLength} of ${t.size} bytes)`);
+      const zip = await JSZip.loadAsync(buf);
+      let tifEntry = null;
+      for (const e of Object.values(zip.files)) {
+        const base = e.name.split("/").pop();
+        if (base.endsWith(".tif.aux.xml")) await writeFile(dir, tif + ".aux.xml", await e.async("uint8array"));
+        else if (base.endsWith(".qml")) await writeFile(dir, t.name + ".qml", await e.async("uint8array"));
+        else if (base.endsWith(".tif")) tifEntry = e;
+      }
+      if (!tifEntry) throw new Error("no .tif inside the download");
+      await writeFile(dir, tif, await tifEntry.async("uint8array"));   // written last = tile complete
+      return "ok";
+    } catch (e) {
+      if (attempt >= 3 || stopFlag) return "FAILED: " + e.message;
+      await sleep(5000 * attempt);
+    }
+  }
+}
+
+// Mosaic of the EPSG:3035 tiles: tile E{x}N{y} has its upper-left corner at
+// (x * 100 km, (y + 1) * 100 km), 10000 x 10000 pixels of 10 m.
+async function writeMosaic(year, dir) {
+  const parts = [];
+  for (const t of tiles[year]) {
+    const m = t.name.match(/_E(\d+)N(\d+)_03035_/);
+    if (m && await exists(dir, t.name + ".tif")) parts.push({ name: t.name, e: +m[1], n: +m[2] });
+  }
+  if (!parts.length) return;
+  const minE = Math.min(...parts.map(p => p.e)), maxE = Math.max(...parts.map(p => p.e));
+  const minN = Math.min(...parts.map(p => p.n)), maxN = Math.max(...parts.map(p => p.n));
+  const sources = parts.map(p => `    <ComplexSource>
+      <SourceFilename relativeToVRT="1">${p.name}.tif</SourceFilename>
+      <SourceBand>1</SourceBand>
+      <SourceProperties RasterXSize="${TILE_PX}" RasterYSize="${TILE_PX}" DataType="Byte" BlockXSize="512" BlockYSize="512" />
+      <SrcRect xOff="0" yOff="0" xSize="${TILE_PX}" ySize="${TILE_PX}" />
+      <DstRect xOff="${(p.e - minE) * TILE_PX}" yOff="${(maxN - p.n) * TILE_PX}" xSize="${TILE_PX}" ySize="${TILE_PX}" />
+      <NODATA>255</NODATA>
+    </ComplexSource>`).join("\n");
+  const vrt = `<VRTDataset rasterXSize="${(maxE - minE + 1) * TILE_PX}" rasterYSize="${(maxN - minN + 1) * TILE_PX}">
+  <SRS>EPSG:3035</SRS>
+  <GeoTransform>${minE * TILE_M}, 10, 0, ${(maxN + 1) * TILE_M}, 0, -10</GeoTransform>
+  <VRTRasterBand dataType="Byte" band="1">
+    <NoDataValue>255</NoDataValue>
+${sources}
+  </VRTRasterBand>
+</VRTDataset>
+`;
+  await writeFile(dir, `Europe_ForestType_${year}.vrt`, vrt);
+  try {   // reuse a tile's legend so the mosaic opens coloured too
+    const qml = await (await dir.getFileHandle(parts[0].name + ".qml")).getFile();
+    await writeFile(dir, `Europe_ForestType_${year}.qml`, await qml.arrayBuffer());
+  } catch (e) {}
+  log(`Mosaic written: Europe_ForestType_${year}.vrt (${parts.length} tiles)`);
+}
+
+// --------------------------------------------------------------------- run
+async function run() {
+  showError("");
+  const user = $("user").value.trim(), pw = $("pw").value, years = selectedYears();
+  if (!user || !pw) return showError("Please enter the email and password of your Copernicus Data Space account.");
+
+  let root;
+  try { root = await window.showDirectoryPicker({ id: "forest-type", mode: "readwrite", startIn: "downloads" }); }
+  catch (e) { return; }     // user cancelled the folder picker
+
+  store("cdse_user", user);
+  $("go").disabled = true; $("stop").disabled = false; $("after").classList.add("hidden");
+  stopFlag = false;
+  try { wakeLock = await navigator.wakeLock?.request("screen"); } catch (e) {}
+
+  try {
+    setStatus("Logging in…");
+    await auth.login(user, pw);
+    const base = await root.getDirectoryHandle("Forest_Type", { create: true });
+    const jobs = [];
+    for (const y of years) {
+      const dir = await base.getDirectoryHandle(y, { create: true });
+      for (const t of tiles[y]) jobs.push({ t, dir });
+    }
+    let done = 0, saved = 0, skipped = 0, failed = 0, next = 0;
+    const update = () => {
+      $("bar").style.width = (100 * done / jobs.length) + "%";
+      setStatus(`${done} of ${jobs.length} tiles done` + (failed ? `, ${failed} failed` : "") +
+                (skipped ? ` (${skipped} already there)` : ""));
+    };
+    update();
+    async function worker() {
+      while (!stopFlag && next < jobs.length) {
+        const { t, dir } = jobs[next++];
+        const res = await downloadTile(t, dir);
+        if (res === "ok") saved++; else if (res === "skip") skipped++;
+        else { failed++; log(`${t.name}: ${res}`); }
+        done++; update();
+      }
+    }
+    await Promise.all(Array.from({ length: WORKERS }, worker));
+
+    if (!stopFlag) {
+      setStatus("Building the Europe mosaic…");
+      for (const y of years) await writeMosaic(y, await base.getDirectoryHandle(y));
+    }
+    $("bar").style.width = (100 * done / jobs.length) + "%";
+    if (stopFlag) setStatus(`Stopped. ${saved + skipped} tiles saved. Press download again (same folder) to continue.`);
+    else if (failed) setStatus(`${saved + skipped} tiles saved, ${failed} failed. Press download again (same folder) to retry them.`);
+    else { setStatus(`Finished: all ${jobs.length} tiles are in ${root.name}/Forest_Type/.`); $("after").classList.remove("hidden"); }
+  } catch (e) {
+    showError(e.message);
+    setStatus("Stopped.");
+  } finally {
+    $("go").disabled = false; $("stop").disabled = true;
+    try { await wakeLock?.release(); } catch (e) {}
+  }
+}
+
+// --------------------------------------------------------------------- init
+$("years").innerHTML = YEARS.map(y => `<label class="year"><input type="checkbox" id="y${y}" ${y === "2024" ? "checked" : ""}>
+  <b>${y}</b><span id="info${y}">…</span></label>`).join("");
+YEARS.forEach(y => $("y" + y).addEventListener("change", updateTotal));
+$("go").addEventListener("click", run);
+$("stop").addEventListener("click", () => { stopFlag = true; $("stop").disabled = true; setStatus("Stopping after the tiles in progress…"); });
+$("user").value = recall("cdse_user");
+if (!window.showDirectoryPicker) $("browserWarn").classList.remove("hidden");
+loadCatalogue().catch(e => { $("total").textContent = ""; showError("Could not load the tile list: " + e.message + ". Check the internet connection and reload."); });
+</script>
+</body>
+</html>

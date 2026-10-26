@@ -1,40 +1,33 @@
-# Forest Type Downloader (Mac)
+# Forest Type Downloader
 
 Downloads the Copernicus **Forest Type** map (10 m resolution, whole of Europe)
-for 2018, 2021 and/or 2024. Each year is about 3.5 GB (902 map tiles).
+for 2018, 2021 and/or 2024, ready to open in QGIS. Each year is about 3.5 GB (902 map tiles).
 
-## ⬇️ [Download the app](https://github.com/tek-raj/forest-type-downloader/archive/refs/heads/main.zip)
+## 👉 [Open the downloader](https://tek-raj.github.io/forest-type-downloader/)
 
-## How to use
+Runs in the browser — nothing to install. Use **Google Chrome** or **Microsoft Edge** (Mac or Windows).
 
-1. Click **Download the app** above and open the downloaded zip.
-2. In the folder, **right-click** `Start Forest Type Downloader.command` and choose **Open**.
-   The first time, macOS asks if you are sure: click **Open**.
-   *(If there is no Open button: System Settings → Privacy & Security → scroll down → **Open Anyway**.)*
-3. First time only:
-   - If a message says Python is needed, your browser opens python.org. Click the yellow
-     **Download Python** button, install it like any app, then repeat step 2.
-   - A Terminal window shows *First-time setup, please wait…* for about a minute. Leave it open.
-4. In the window that appears:
-   - Enter the email and password of your free [Copernicus Data Space](https://dataspace.copernicus.eu) account.
-   - Tick the year(s) you want and press **Download**.
-5. When it finishes, click **Yes** to open the folder: `Downloads › Forest_Type › <year>`,
-   one `.tif` per 100 × 100 km tile. Drag them into QGIS; they open already coloured
+1. Enter the email and password of your free [Copernicus Data Space](https://dataspace.copernicus.eu) account.
+2. Tick the year(s).
+3. Click **Choose folder & download**, pick a folder (e.g. Downloads) and allow the page to save there.
+   Keep the tab open until it says *Finished*.
+4. In QGIS, drag **`Forest_Type/<year>/Europe_ForestType_<year>.vrt`** onto the map:
+   all of Europe as one layer, already coloured
    (0 = non-forest, 1 = broadleaved, 2 = coniferous).
 
-**Whole of Europe as one layer in QGIS:** Raster › Miscellaneous › Build Virtual Raster… →
-Input layers: “…” › Add Directory… › choose the year folder → Run.
-The five overseas tiles (GF, GP, MQ, RE, YT) use a different projection; leave them out.
+If it stops (internet dropped, laptop closed, you pressed Stop), click download again and pick the
+same folder — tiles already saved are skipped.
 
-## Good to know
-
-- Keep the Terminal window open while the downloader runs.
-- If it stops (internet dropped, laptop closed, you pressed Stop), press **Download** again:
-  tiles you already have are skipped.
-- The password is never saved; only the email is remembered.
+Your password is sent only to Copernicus's own login server (`identity.dataspace.copernicus.eu`)
+and is never stored. The page is a single file, [`index.html`](index.html), if you want to check.
 
 ---
 
+### Alternative: Mac app (Python)
+
+If the browser version isn't an option, [download this folder](https://github.com/tek-raj/forest-type-downloader/archive/refs/heads/main.zip),
+right-click `Start Forest Type Downloader.command` → **Open**, and follow `READ ME FIRST.txt`.
+Command line on any system: `pip install requests` then `python cdse_download.py get --year 2024`.
+
 Data: [CLMS High Resolution Layer Forest Type](https://land.copernicus.eu/en/products/high-resolution-layer-forests-and-tree-cover/forest-type-2018-present-raster-10-m-europe-3-yearly),
-served by the Copernicus Data Space Ecosystem.
-Also runs on Windows/Linux: `pip install requests` then `python forest_downloader_gui.py`.
+served by the Copernicus Data Space Ecosystem. Unofficial helper tool, not affiliated with Copernicus.
