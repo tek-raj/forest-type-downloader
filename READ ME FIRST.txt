@@ -1,0 +1,50 @@
+FOREST TYPE DOWNLOADER (Mac)
+============================
+
+Downloads the Copernicus "Forest Type" map (10 m resolution, whole of Europe)
+for the year(s) you choose. Each year is about 3.5 GB (902 map tiles).
+
+
+HOW TO USE
+----------
+1. Unzip the folder (double-click the .zip) and keep the files together.
+
+2. Right-click "Start Forest Type Downloader.command" and choose "Open".
+   (The first time, macOS asks if you are sure - click "Open". After that
+   you can just double-click it.)
+
+   If macOS says it "cannot be opened" and offers no Open button:
+   open System Settings > Privacy & Security, scroll down and click
+   "Open Anyway", then try again.
+
+3. The very first time only:
+   - If a message says Python is needed, your browser opens python.org.
+     Click the yellow "Download Python" button, install it like any app,
+     then do step 2 again.
+   - A Terminal window shows "First-time setup, please wait..." for about
+     a minute. Leave it open.
+
+4. In the window that appears:
+   - Enter the email and password of the Copernicus Data Space account
+     (free, from https://dataspace.copernicus.eu).
+   - Tick the year(s) you want.
+   - Press "Download". The bar shows progress.
+
+5. When it finishes, click "Yes" to open the folder. The maps are in
+   Downloads > Forest_Type > <year>, one .tif file per 100 x 100 km tile.
+   Drag any .tif into QGIS - it opens already coloured with the legend
+   (0 = non-forest, 1 = broadleaved, 2 = coniferous).
+
+   To see all of Europe as ONE layer in QGIS:
+   Raster menu > Miscellaneous > Build Virtual Raster... >
+   "Input layers": click "...", "Add Directory...", choose the year folder,
+   then click Run. (The five overseas tiles GF, GP, MQ, RE, YT use a
+   different map projection - leave them out if QGIS complains.)
+
+
+GOOD TO KNOW
+------------
+- Keep the Terminal window open while the downloader runs.
+- If it stops (internet dropped, laptop closed, you pressed Stop), just press
+  "Download" again - tiles you already have are skipped.
+- The password is not saved anywhere; the email is remembered.

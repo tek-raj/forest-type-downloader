@@ -1,0 +1,5 @@
+# Mac launcher and scripts must keep Unix line endings
+*.command text eol=lf
+*.py      text eol=lf
+*.txt     text eol=lf
+*.md      text eol=lf
