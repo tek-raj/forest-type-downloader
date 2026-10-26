@@ -26,7 +26,7 @@ tiles, so keep it in the same folder as them. To turn it into one real GeoTIFF (
 1. In QGIS: **Raster › Conversion › Translate (Convert Format)…**
 2. **Input layer:** `Europe_ForestType_<year>.vrt`
 3. Open **Advanced Parameters** → **Additional creation options** → paste:
-   `COMPRESS=ZSTD|BIGTIFF=YES|TILED=YES|BLOCKXSIZE=512|BLOCKYSIZE=512|NUM_THREADS=ALL_CPUS`
+   `COMPRESS=DEFLATE|BIGTIFF=YES|TILED=YES|BLOCKXSIZE=512|BLOCKYSIZE=512|NUM_THREADS=ALL_CPUS`
 4. **Converted:** “…” › Save to File… › e.g. `Europe_ForestType_2024_10m.tif` → **Run**.
    This takes a while (minutes to an hour, depending on the computer).
 5. So it displays quickly when zoomed out: **Raster › Miscellaneous › Build Overviews (Pyramids)…**,
